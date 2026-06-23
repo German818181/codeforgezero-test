@@ -1,0 +1,69 @@
+name: CodeForgeZero DevSecOps Pipeline
+
+on: [push]
+
+jobs:
+  auditoria-ia:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el código con historial
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 2  # Necesario para poder comparar con el commit anterior
+
+      - name: Instalar herramientas
+        run: pip install requests
+
+      - name: Analizar archivos modificados con CodeForgeZero
+        run: |
+          python -c "
+          import subprocess, requests, sys, os
+
+          url = 'https://codeforgezero-backend.onrender.com/api/optimize'
+
+          # Detectar qué archivos .py cambiaron en este push
+          resultado = subprocess.run(
+              ['git', 'diff', '--name-only', 'HEAD~1', 'HEAD'],
+              capture_output=True, text=True
+          )
+          archivos = [f for f in resultado.stdout.splitlines() if f.endswith('.py')]
+
+          if not archivos:
+              print('ℹ️ No se modificaron archivos Python en este push.')
+              sys.exit(0)
+
+          print(f'🔍 Archivos detectados: {archivos}')
+
+          hubo_error = False
+
+          for archivo in archivos:
+              if not os.path.exists(archivo):
+                  continue  # El archivo pudo haber sido borrado en este push
+
+              with open(archivo, 'r', encoding='utf-8') as f:
+                  codigo = f.read()
+
+              print(f'🚀 Enviando {archivo} a CodeForgeZero...')
+              try:
+                  res = requests.post(url, json={'codigo_sucio': codigo}, timeout=60)
+                  data = res.json()
+              except Exception as e:
+                  print(f'❌ Error de conexión con el motor: {e}')
+                  hubo_error = True
+                  continue
+
+              if data.get('status') != 'exito':
+                  print(f'⚠️ El motor no pudo procesar {archivo}: {data.get(\"error\")}')
+                  continue
+
+              datos = data['datos_optimizados']
+              metricas = datos.get('metricas', {})
+
+              print(f'✅ {archivo} analizado')
+              print(f'   RAM: {metricas.get(\"porcentaje_ahorro_ram\")}% | CPU: {metricas.get(\"porcentaje_ahorro_cpu\")}%')
+              print(f'   Reporte: {datos.get(\"reporte\")}')
+              print('---')
+
+          sys.exit(0)
+          "
+        shell: bash
