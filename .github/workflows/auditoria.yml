@@ -45,7 +45,7 @@ jobs:
 
               print(f'🚀 Enviando {archivo} a CodeForgeZero...')
               try:
-                  res = requests.post(url, json={'codigo_sucio': codigo}, timeout=60)
+                  res = requests.post(url, json={'codigo_sucio': codigo}, timeout=120)
                   data = res.json()
               except Exception as e:
                   print(f'❌ Error de conexión con el motor: {e}')
