@@ -7,7 +7,7 @@ def encontrar_duplicados(lista):
                     if lista[i] not in duplicados:
                         duplicados.append(lista[i])
     return duplicados
- 
+
 def calcular_promedio(numeros):
     suma = 0
     lista_copia = []
