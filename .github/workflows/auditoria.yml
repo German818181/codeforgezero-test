@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Descargar el código con historial completo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -62,10 +62,16 @@ jobs:
 
               print(f'Enviando {archivo} a CodeForgeZero...')
               try:
+                  # Timeout de 120s para dar margen a Render y al modelo Pro
                   res = requests.post(url, json={'codigo_sucio': codigo}, timeout=120)
+                  
+                  if res.status_code != 200:
+                      print(f'Error HTTP {res.status_code} al procesar {archivo}: {res.text[:150]}')
+                      continue
+                      
                   data = res.json()
               except Exception as e:
-                  print(f'Error de conexion con el motor: {e}')
+                  print(f'Error de conexion/parsing con el motor: {e}')
                   continue
 
               if data.get('status') != 'exito':
@@ -77,7 +83,16 @@ jobs:
               ram = metricas.get('porcentaje_ahorro_ram', 0)
               cpu = metricas.get('porcentaje_ahorro_cpu', 0)
               reporte = datos.get('reporte', '')
-              codigo_optimizado = datos.get('codigo_optimizado', '')
+              codigo_optimizado = datos.get('codigo_optimizado', '').strip()
+
+              # Sanitización: Remueve bloques ``` si el motor los incluyó dentro del string
+              if codigo_optimizado.startswith('```'):
+                  lineas = codigo_optimizado.splitlines()
+                  if lineas and lineas[0].startswith('```'):
+                      lineas = lineas[1:]
+                  if lineas and lineas[-1].startswith('```'):
+                      lineas = lineas[:-1]
+                  codigo_optimizado = '\n'.join(lineas)
 
               hubo_resultados = True
               comentario_partes.append(f'### {bt}{archivo}{bt}')
@@ -95,10 +110,10 @@ jobs:
               comentario_partes.append('---')
 
           if not hubo_resultados:
-              print('No hubo resultados para comentar.')
+              print('No hubo resultados válidos para comentar.')
               sys.exit(0)
 
-          cuerpo_comentario = chr(10).join(comentario_partes)
+          cuerpo_comentario = '\n'.join(comentario_partes)
 
           api_url = f'https://api.github.com/repos/{repo}/issues/{pr_number}/comments'
           headers = {
