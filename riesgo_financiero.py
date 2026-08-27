@@ -63,7 +63,7 @@ class SimuladorRiesgoFinanciero:
         return buffer_texto
 
 def ejecutar_motor_pesado():
-    motor = SimuladorRiesgoFinanciero(registros_totales=50)
+    motor = SimuladorRiesgoFinanciero(registros_totales=20)
     fraudulentos = motor.cruzar_con_listas_negras()
     reporte = motor.generar_reporte_masivo_texto()
     triplas = motor.detectar_patrones_lavado_triples()
