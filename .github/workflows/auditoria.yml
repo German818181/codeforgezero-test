@@ -54,6 +54,11 @@ jobs:
           triple = bt * 3
 
           for archivo in archivos:
+              # Filtro clave: ignorar la carpeta .github y archivos ocultos
+              if ".github" in archivo or archivo.startswith("."):
+                  print(f'Ignorando {archivo} (es de sistema/configuración)')
+                  continue
+
               if not os.path.exists(archivo):
                   continue
 
@@ -62,7 +67,6 @@ jobs:
 
               print(f'Enviando {archivo} a CodeForgeZero...')
               try:
-                  # Timeout de 120s para dar margen a Render y al modelo Pro
                   res = requests.post(url, json={'codigo_sucio': codigo}, timeout=120)
                   
                   if res.status_code != 200:
@@ -74,8 +78,10 @@ jobs:
                   print(f'Error de conexion/parsing con el motor: {e}')
                   continue
 
+              # Mejora en el log de error para no volar a ciegas
               if data.get('status') != 'exito':
-                  print(f'El motor no pudo procesar {archivo}')
+                  motivo = data.get('error', 'Fallo desconocido')
+                  print(f'El motor no pudo procesar {archivo}. Motivo exacto: {motivo}')
                   continue
 
               datos = data['datos_optimizados']
@@ -85,7 +91,6 @@ jobs:
               reporte = datos.get('reporte', '')
               codigo_optimizado = datos.get('codigo_optimizado', '').strip()
 
-              # Sanitización: Remueve bloques ``` si el motor los incluyó dentro del string
               if codigo_optimizado.startswith('```'):
                   lineas = codigo_optimizado.splitlines()
                   if lineas and lineas[0].startswith('```'):
@@ -115,7 +120,7 @@ jobs:
 
           cuerpo_comentario = '\n'.join(comentario_partes)
 
-          api_url = f'https://api.github.com/repos/{repo}/issues/{pr_number}/comments'
+          api_url = f'[https://api.github.com/repos/](https://api.github.com/repos/){repo}/issues/{pr_number}/comments'
           headers = {
               'Authorization': f'Bearer {github_token}',
               'Accept': 'application/vnd.github+json'
