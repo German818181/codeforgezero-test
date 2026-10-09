@@ -7,7 +7,7 @@ export async function getActiveUsers(userIds) {
       .select('name, email')
       .eq('id', id)
       .single();
-      
+      // Función para obtener usuarios activos
     if (data) users.push(data);
   }
   
